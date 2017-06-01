@@ -133,8 +133,11 @@ class SpriteQueue:
         self.level2 = {}
         self.level3 = {}
 
+    def to_hex(self, i):
+        return str(hex(int(i))[2:].zfill(8).upper())
+
     def add(self, sprite, level, unique_id=False):
-        id = str(hex(self.counter))
+        id = self.to_hex(self.counter)
         if type(unique_id) == str:
             id = unique_id
         if level == 1:
@@ -147,23 +150,35 @@ class SpriteQueue:
         return id
 
     def update(self, dt):
-        """
+        """ 
         pop_em = []
         for key in self.level1.keys():
+            print(key)
             if not(self.level1[key].update(dt)):
-                pop_em += key
+                pop_em += self.to_hex(key)
         for key in pop_em:
-            self.level1.pop(key)
+            try:
+                self.level1.pop(self.to_hex(key))
+            except KeyError:
+                pass
+        pop_em = []
         for key in self.level2.keys():
             if not(self.level2[key].update(dt)):
-                pop_em += key
+                pop_em += self.to_hex(key)
         for key in pop_em:
-            self.level2.pop(key)
+            try:
+                self.level2.pop(self.to_hex(key))
+            except KeyError:
+                pass
+        pop_em = []
         for key in self.level3.keys():
             if not(self.level3[key].update(dt)):
-                pop_em += key
+                pop_em += self.to_hex(key)
         for key in pop_em:
-            self.level3.pop(key)
+            try:
+                self.level3.pop(self.to_hex(key))
+            except KeyError:
+                pass
         """
         for key in self.level1.keys():
             self.level1[key].update(dt)
@@ -171,7 +186,6 @@ class SpriteQueue:
             self.level2[key].update(dt)
         for key in self.level3.keys():
             self.level3[key].update(dt)
-
 
     def draw(self, screen):
         for key in self.level1.keys():
@@ -244,6 +258,7 @@ class Game(ezpygame.Scene):
         pygame.mixer.init()
         pygame.mixer.music.load("data/music/dj4real-clv-ovation-2-98.wav")
         pygame.mixer.music.play(-1)
+        self.score = 0
         self.counter = 0
         self.rev_count = False
         self.grid_size = 8
@@ -261,7 +276,6 @@ class Game(ezpygame.Scene):
         print("Generated board with")
         pprint(self.mapp)
         self.selection = Selection()
-        self.score = 0
         self.font = pygame.font.Font("data/foo.ttf", 64)
         self.frame_image = load_png("data", "frame.png")[0]
         self.frame_image_selected = load_png("data", "frame_selected.png")[0]
@@ -269,7 +283,7 @@ class Game(ezpygame.Scene):
         self.back_rect = pygame.Rect(0, 0, 0, 0)
         self.first_run = FirstTimeRun()
         self.animation_queue = SpriteQueue()
-        #self.effect_300 = self.load_images("data/anim/300")
+        self.effect_300 = self.load_images("data/anim/300")
         #self.effect_300 = self.effect_300 + reversed(self.effect_300)
 
     def generate_board(self):
@@ -277,6 +291,7 @@ class Game(ezpygame.Scene):
         Walks mapp grid and rolls value from 0 to 3 for EVERY block.
         :return: 
         """
+        self.score -= 1000
         for y in range(0, self.grid_size):
             for x in range(0, self.grid_size):
                 self.mapp[y][x] = random.randint(0, len(self.resources)-2)
@@ -392,7 +407,7 @@ class Game(ezpygame.Scene):
                     if self.mapp[y][x] == -1:
                         continue
                     if (self.mapp[y][x] == self.mapp[y][x+1]) and (self.mapp[y][x] == self.mapp[y][x+2]):
-                        self.animation_queue.add(Sprite(self.transform_to_pixels((x, y)), images=self.load_images("data/anim/300"), time=50, one_time=True), 1)
+                        self.animation_queue.add(Sprite(self.transform_to_pixels((x, y)), images=self.effect_300, time=50, one_time=True), 1)
                         type_ = int(self.mapp[y][x])
                         for i in range(0, 3):
                             self.mapp[y][x+i] = -1
@@ -419,7 +434,7 @@ class Game(ezpygame.Scene):
                 try:
                     if (self.mapp[y][x] == self.mapp[y+1][x]) and (self.mapp[y][x] == self.mapp[y+2][x]):
                         #print((x-1)*self.grid_size)
-                        self.animation_queue.add(Sprite(self.transform_to_pixels((x, y)), images=self.load_images("data/anim/300"), time=50, one_time=True), 1)
+                        self.animation_queue.add(Sprite(self.transform_to_pixels((x, y)), images=self.effect_300, time=50, one_time=True), 1)
                         type_ = int(self.mapp[y][x])
                         for i in range(0, 3):
                             self.mapp[y+i][x] = -1
@@ -569,8 +584,7 @@ class Game(ezpygame.Scene):
         """
         x = pos[0]
         y = pos[1]
-        print(math.ceil((x)*grid_size+1)+100, math.ceil((y)*grid_size+1)+100)
-        return math.ceil((x)*grid_size+1)+100, math.ceil((y)*grid_size+1)+100
+        return math.ceil(x*(grid_size+1))+100, math.ceil(y*(grid_size+1))+100
 
     def on_exit(self, next_scene=None):
         pygame.mixer.fadeout(250)
