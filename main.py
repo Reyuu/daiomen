@@ -84,7 +84,7 @@ class Sprite:
         """
         self.size = (images[0].get_width(), images[0].get_height())
         self.rect = pygame.Rect(pos, self.size)
-        self.images = images[:-1]
+        self.images = images
         self.index = 0
         self.image = images[self.index]  # 'image' is the current image of the sprite.
         #print(len(self.images))
@@ -392,6 +392,7 @@ class Game(ezpygame.Scene):
                     if self.mapp[y][x] == -1:
                         continue
                     if (self.mapp[y][x] == self.mapp[y][x+1]) and (self.mapp[y][x] == self.mapp[y][x+2]):
+                        self.animation_queue.add(Sprite(self.transform_to_pixels((x, y)), images=self.load_images("data/anim/300"), time=50, one_time=True), 1)
                         type_ = int(self.mapp[y][x])
                         for i in range(0, 3):
                             self.mapp[y][x+i] = -1
@@ -417,6 +418,8 @@ class Game(ezpygame.Scene):
                 # horizontal
                 try:
                     if (self.mapp[y][x] == self.mapp[y+1][x]) and (self.mapp[y][x] == self.mapp[y+2][x]):
+                        #print((x-1)*self.grid_size)
+                        self.animation_queue.add(Sprite(self.transform_to_pixels((x, y)), images=self.load_images("data/anim/300"), time=50, one_time=True), 1)
                         type_ = int(self.mapp[y][x])
                         for i in range(0, 3):
                             self.mapp[y+i][x] = -1
@@ -554,7 +557,20 @@ class Game(ezpygame.Scene):
         x = pos[0]
         y = pos[1]
         # print(math.ceil((x-100)/64)-1, math.ceil((y-100)/64)-1)
-        return math.ceil((x - 100) / grid_size - 1), math.ceil((y - 100) / grid_size) - 1
+        return math.ceil((x - 100) / grid_size - 1), math.ceil((y - 100) / grid_size - 1)
+
+    @staticmethod
+    def transform_to_pixels(pos, grid_size=64):
+        """
+        Transforms grid coordinates to reverse cartesian coordinates.
+        :param pos:
+        :param grid_size:
+        :return:
+        """
+        x = pos[0]
+        y = pos[1]
+        print(math.ceil((x)*grid_size+1)+100, math.ceil((y)*grid_size+1)+100)
+        return math.ceil((x)*grid_size+1)+100, math.ceil((y)*grid_size+1)+100
 
     def on_exit(self, next_scene=None):
         pygame.mixer.fadeout(250)
