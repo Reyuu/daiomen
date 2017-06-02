@@ -1,0 +1,26 @@
+#Commenting is possible
+<<create Speaker name1>>
+<<create Speaker name2>>
+<<set name1.name "Consta">>
+<<set name1.image "data/icon.png">>
+<<set name2.name "Rina">>
+<<set name2.image "data/icon.png">>
+<<set name2.visibility false>>
+[name1]
+Ahh. What a night...
+
+[name1]
+<<set name1.image "data/title.png">>
+The wind really feels good on my skin.
+
+[name2]
+<<set name2.visibility true>>
+Please cut the bullshit on this one.
+
+[name1]
+<<set name1.image "data/frame.png">>
+What.
+
+[name2]
+<<set name2.image "data/frame.png">>
+Shity frame yo
