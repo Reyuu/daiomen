@@ -31,13 +31,14 @@ class Speaker:
         self.current_image = pygame.Surface((1, 1))
         self.name = ""
         self.visibility = True
+        self.side = "left"
 
     def process(self):
-        print(self.image)
+        #print(self.image)
         self.current_image = load_png(self.image)[0]
 
     def handle_set(self, n, m):
-        print(n, m)
+        #print(n, m)
         n = n.strip("\"")
         m = m.strip("\"")
         if n == "image":
@@ -45,6 +46,10 @@ class Speaker:
             self.process()
         if n == "name":
             self.name = m
+        if n == "side":
+            print(n, m)
+            self.side = m.lower()
+            print(self.side)
         if n == "visibility":
             bl = {"false": False, "true": True}
             self.visibility = bool(bl[m.lower()])
@@ -54,18 +59,19 @@ class Scripting:
     def __init__(self):
         self.keywords = {}
         self.constants = {"Speaker": Speaker}
-        self.variables = {"current_speaker": None, "current_line": "", "name1": Speaker(), "name2": Speaker()}
+        self.variables = {"current_speaker": None, "current_line": "",
+                          "name1": Speaker(), "name2": Speaker()}
         self.paused = False
 
     def parse_instruction(self, instruction):
-        print(instruction)
+        #print(instruction)
         words = instruction.split(" ")
         if words[0] == "create":
             self.variables.update({words[2]: self.constants[words[1]]()})
         if words[0] == "set":
             try:
                 var = words[1].split(".")[0]
-                print(var)
+                #print(var)
                 if isinstance(self.variables[var], self.constants["Speaker"]):
                     self.variables[var].handle_set(words[1].split(".")[1], words[2])
             except IndexError:
@@ -148,16 +154,45 @@ class Game(ezpygame.Scene):
         with open("data/script/dialogue/001_RinaConsta_TEST.dia") as f:
             self.dialogue = collections.deque(f.readlines())
         self.script_line = self.dialogue.popleft()
+        self.test_bg = load_png("data/menu_bg02.png")[0].convert_alpha()
 
+    def darken(self, surf):
+        surface = pygame.Surface((surf.get_width(), surf.get_height()), pygame.SRCALPHA)
+        surface.fill((0, 0, 0, 150))
+        surface.blit(surf, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        return surface
 
     def draw(self, screen):
-        screen.fill((100, 100, 100))
+        #TODO port to DialoueBox class with transparency, update() handling and animations
+        screen.fill((0, 0, 0))
+        screen.blit(self.test_bg, (0, 0))
         if self.scripting.paused:
             cur_speaker = self.scripting.variables["current_speaker"]
+            cur_speaker_rendered = self.font.render(self.scripting.variables[cur_speaker].name, True, (255, 255, 255))
             line = self.font.render(self.scripting.variables["current_line"], True, (255, 255, 255))
-            print(self.scripting.variables[cur_speaker].current_image)
-            screen.blit(self.scripting.variables[cur_speaker].current_image, (0,0))
-            screen.blit(line, (50, self.application.resolution[1]-250))
+            dialogue_box = pygame.Surface((self.application.resolution[0], self.application.resolution[1]-250))
+            dialogue_box.fill((0, 0, 0))
+            name1_img = self.scripting.variables["name1"].current_image
+            name2_img = self.scripting.variables["name2"].current_image
+            if cur_speaker == "name1":
+                name2_img = self.darken(name2_img)
+            if cur_speaker == "name2":
+                name1_img = self.darken(name1_img)
+            if self.scripting.variables["name1"].visibility:
+                if self.scripting.variables["name1"].side == "left":
+                    screen.blit(name1_img, (50,200))
+                if self.scripting.variables["name1"].side == "right":
+                    screen.blit(name1_img, (self.application.resolution[0]-300, 200))
+                #add middle
+            if self.scripting.variables["name2"].visibility:
+                if self.scripting.variables["name2"].side == "left":
+                    screen.blit(name2_img, (50,200))
+                if self.scripting.variables["name2"].side == "right":
+                    screen.blit(name2_img, (self.application.resolution[0]-300, 200))
+                #add middle
+            screen.blit(dialogue_box, (0, self.application.resolution[1] - 250))
+            screen.blit(cur_speaker_rendered, (50, self.application.resolution[1]-250))
+            screen.blit(line, (50, self.application.resolution[1]-(250-64)))
         pass
 
     def update(self, dt):

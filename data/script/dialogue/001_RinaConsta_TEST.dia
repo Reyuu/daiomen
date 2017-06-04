@@ -3,9 +3,11 @@
 <<create Speaker name2>>
 <<set name1.name "Consta">>
 <<set name1.image "data/icon.png">>
+<<set name1.side "left">>
 <<set name2.name "Rina">>
 <<set name2.image "data/icon.png">>
-<<set name2.visibility false>>
+#<<set name2.visibility false>>
+<<set name2.side "right">>
 [name1]
 Ahh. What a night...
 
@@ -14,7 +16,6 @@ Ahh. What a night...
 The wind really feels good on my skin.
 
 [name2]
-<<set name2.visibility true>>
 Please cut the bullshit on this one.
 
 [name1]
@@ -24,3 +25,4 @@ What.
 [name2]
 <<set name2.image "data/frame.png">>
 Shity frame yo
+
