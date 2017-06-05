@@ -36,6 +36,8 @@ class Speaker:
     def process(self):
         #print(self.image)
         self.current_image = load_png(self.image)[0]
+        if self.side == "left":
+            self.current_image = pygame.transform.flip(self.current_image, True, False)
 
     def handle_set(self, n, m):
         #print(n, m)
