@@ -1,7 +1,6 @@
 import pygame
 import collections
 import ezpygame
-import re
 import os
 Point = collections.namedtuple("Point", ["x", "y"])
 
@@ -146,17 +145,17 @@ while 1:
         pass
 """
 
-class Game(ezpygame.Scene):
-    def __init__(self):
-        super().__init__()
+
+class Dialogue:
+    def __init__(self, filename, bg):
         pygame.font.init()
         self.font = pygame.font.Font("data/foo.ttf", 32)
         self.scripting = Scripting()
         self.dialogue = collections.deque()
-        with open("data/script/dialogue/001_RinaConsta_TEST.dia") as f:
+        with open("data/script/dialogue/%s" % filename) as f:
             self.dialogue = collections.deque(f.readlines())
         self.script_line = self.dialogue.popleft()
-        self.test_bg = load_png("data/menu_bg02.png")[0].convert_alpha()
+        self.test_bg = bg.convert_alpha()
 
     def darken(self, surf):
         surface = pygame.Surface((surf.get_width(), surf.get_height()), pygame.SRCALPHA)
@@ -165,14 +164,14 @@ class Game(ezpygame.Scene):
         return surface
 
     def draw(self, screen):
-        #TODO port to DialoueBox class with transparency, update() handling and animations
+        width, height = (screen.get_width(), screen.get_height())
         screen.fill((0, 0, 0))
         screen.blit(self.test_bg, (0, 0))
         if self.scripting.paused:
             cur_speaker = self.scripting.variables["current_speaker"]
             cur_speaker_rendered = self.font.render(self.scripting.variables[cur_speaker].name, True, (255, 255, 255))
             line = self.font.render(self.scripting.variables["current_line"], True, (255, 255, 255))
-            dialogue_box = pygame.Surface((self.application.resolution[0], self.application.resolution[1]-250))
+            dialogue_box = pygame.Surface((width, height - 250))
             dialogue_box.fill((0, 0, 0))
             name1_img = self.scripting.variables["name1"].current_image
             name2_img = self.scripting.variables["name2"].current_image
@@ -182,20 +181,20 @@ class Game(ezpygame.Scene):
                 name1_img = self.darken(name1_img)
             if self.scripting.variables["name1"].visibility:
                 if self.scripting.variables["name1"].side == "left":
-                    screen.blit(name1_img, (50,200))
+                    screen.blit(name1_img, (50, 200))
                 if self.scripting.variables["name1"].side == "right":
-                    screen.blit(name1_img, (self.application.resolution[0]-300, 200))
-                #add middle
+                    screen.blit(name1_img, (width - 300, 200))
+                    # add middle
             if self.scripting.variables["name2"].visibility:
                 if self.scripting.variables["name2"].side == "left":
-                    screen.blit(name2_img, (50,200))
+                    screen.blit(name2_img, (50, 200))
                 if self.scripting.variables["name2"].side == "right":
-                    screen.blit(name2_img, (self.application.resolution[0]-300, 200))
-                #add middle
-            screen.blit(dialogue_box, (0, self.application.resolution[1] - 250))
-            screen.blit(cur_speaker_rendered, (50, self.application.resolution[1]-250))
-            screen.blit(line, (50, self.application.resolution[1]-(250-64)))
-        pass
+                    screen.blit(name2_img, (width - 300, 200))
+                    # add middle
+            screen.blit(dialogue_box, (0, height - 250))
+            screen.blit(cur_speaker_rendered, (50, height - 250))
+            screen.blit(line, (50, height - (250 - 64)))
+        return screen
 
     def update(self, dt):
         result = self.scripting.parse_line(self.script_line)
@@ -204,27 +203,40 @@ class Game(ezpygame.Scene):
         else:
             self.script_line = self.dialogue.popleft()
 
+    def next(self):
+        self.scripting.paused = False
+        try:
+            self.script_line = self.dialogue.popleft()
+            return True
+        except IndexError:
+            return False
+
+
+class DialogueScene(ezpygame.Scene):
+    def __init__(self, a, b):
+        super().__init__()
+        self.dialogue = Dialogue("001_RinaConsta_TEST.dia", load_png("data/menu_bg02.png")[0])
+
+    def draw(self, screen):
+        screen.fill((0, 0, 0))
+        screen.blit(self.dialogue.draw(screen), (0, 0))
+
+    def update(self, dt):
+        self.dialogue.update(dt)
+
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
-                print("Trying to upause")
-                self.scripting.paused = False
-                self.script_line = self.dialogue.popleft()
-        pass
-
-    def on_enter(self, previous_scene=None):
-        pass
-
-    def on_exit(self, next_scene=None):
-        pass
+                if not (self.dialogue.next()):
+                    print("Finished")
 
 
-
-
+"""
 app = ezpygame.Application(
     title="Daoimen",
     resolution=(1280, 720),
     update_rate=60
 )
 
-app.run(Game())
+app.run(DialogueScene("001_RinaConsta_TEST.dia", load_png("data/menu_bg02.png")[0]))
+"""
