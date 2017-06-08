@@ -1,10 +1,11 @@
 import os
 import pygame
+import collections
 import ezpygame
 import random
 import math
+import dialogue
 from pprint import pprint
-
 
 
 def isPointInsideRect(x, y, rect):
@@ -45,6 +46,7 @@ def load_png(directory, name):
     fullname = os.path.join(directory, name)
     #fullname = name
     try:
+        # print(directory, name, type(directory), type(name))
         image = pygame.image.load(fullname)
         if image.get_alpha() is None:
             image = image.convert()
@@ -69,7 +71,6 @@ def blurSurf(surface, amt):
     surf = pygame.transform.smoothscale(surface, scale_size)
     surf = pygame.transform.smoothscale(surf, surf_size)
     return surf
-
 
 
 class Sprite:
@@ -250,14 +251,12 @@ class FirstTimeRun:
 
 
 class Game(ezpygame.Scene):
-
-    def __init__(self):
+    def __init__(self, game_script):
         super().__init__()
         pygame.display.set_icon(load_png("data", "icon.png")[0])
         pygame.font.init()
-        pygame.mixer.init()
-        pygame.mixer.music.load("data/music/dj4real-clv-ovation-2-98.wav")
-        pygame.mixer.music.play(-1)
+        self.type = "game"
+        self.game_scripting = game_script
         self.score = 0
         self.counter = 0
         self.rev_count = False
@@ -314,6 +313,9 @@ class Game(ezpygame.Scene):
 
     def on_enter(self, previous_scene=None):
         self.previous_scene = previous_scene
+        pygame.mixer.init()
+        pygame.mixer.music.load("data/music/dj4real-clv-ovation-2-98.wav")
+        pygame.mixer.music.play(-1)
 
     def fall_the_blocks(self):
         """
@@ -357,8 +359,8 @@ class Game(ezpygame.Scene):
         :param pos2: 
         :return: 
         """
-        print(pos1, pos2)
-        print(abs(pos1[0] - pos2[0]))
+        # print(pos1, pos2)
+        #print(abs(pos1[0] - pos2[0]))
         if (pos1[0] > 7) or (pos1[1] > 7) or (pos1[0] < 0) or (pos1[1] < 0):
             print("Outside grid [0]")
             return False
@@ -380,9 +382,9 @@ class Game(ezpygame.Scene):
         if not(self.check_matched()):
             self.mapp[pos1[1]][pos1[0]] = block1
             self.mapp[pos2[1]][pos2[0]] = block2
-            print(False)
+            #print(False)
             return False
-        print(True)
+        #print(True)
         return True
 
     def check_matched(self):
@@ -602,8 +604,10 @@ class Game(ezpygame.Scene):
                     Sprite(mouse_pos, images=self.load_images("data/anim/300"), time=50, one_time=False), 1)
         if event.type == pygame.MOUSEBUTTONDOWN:
             pos = self.transform_to_grid(mouse_pos)
+            #Back button
             if isPointInsideRect(mouse_pos[0], mouse_pos[1], self.back_rect):
-                self.application.change_scene(self.previous_scene)
+                # not intended effect -> you can continue!
+                self.application.change_scene(Menu(self.game_scripting))
             if (pos[0] > 7) or (pos[1] > 7) or (pos[0] < 0) or (pos[1] < 0):
                 print("Outside grid [3]")
                 return False
@@ -619,6 +623,12 @@ class Game(ezpygame.Scene):
 
     def update(self, dt):
         states = self.check_possible_states()
+        # game condition
+        self.game_scripting.process_line()
+        if self.score > 30000:
+            self.game_scripting.try_next()
+            self.application.change_scene(self.game_scripting.current_scene)
+
         if states < 1:
             self.generate_board()
         self.check_matched()
@@ -675,12 +685,13 @@ class Game(ezpygame.Scene):
 
 
 class Menu(ezpygame.Scene):
-
-    def __init__(self):
+    def __init__(self, game_script):
         super().__init__()
         pygame.display.set_icon(load_png("data", "icon.png")[0])
         pygame.font.init()
         pygame.mixer.init()
+        self.type = "menu"
+        self.game_scripting = game_script
         self.font = pygame.font.Font("data/foo.ttf", 64)
         self.menu_bg = load_png("data", "menu_bg02.png")[0]
         self.title = load_png("data", "title.png")[0]
@@ -693,6 +704,7 @@ class Menu(ezpygame.Scene):
         self.debug = False
 
     def update(self, dt):
+        self.game_scripting.process_line()
         if not self.rev_count:
             self.counter += 0.5
         if self.rev_count:
@@ -703,6 +715,7 @@ class Menu(ezpygame.Scene):
             self.rev_count = False
 
     def on_enter(self, previous_scene=None):
+        self.previous_scene = previous_scene
         pygame.mixer.music.load("data/music/eendee-eendeestrings-free3.wav")
         pygame.mixer.music.play(-1)
 
@@ -721,7 +734,8 @@ class Menu(ezpygame.Scene):
             self.hovering_exit = False
         if event.type == pygame.MOUSEBUTTONDOWN:
             if isPointInsideRect(mouse_pos[0], mouse_pos[1], self.start_rect):
-                self.application.change_scene(Game())
+                self.game_scripting.try_next()
+                self.application.change_scene(self.game_scripting.current_scene)
             if isPointInsideRect(mouse_pos[0], mouse_pos[1], self.exit_rect):
                 os._exit(-1)
         pass
@@ -744,6 +758,11 @@ class Menu(ezpygame.Scene):
             screen.blit(blurSurf(exit, 5), exit_rect)
         """
         start = self.font.render("START", True, (255, 255, 255))
+        try:
+            if self.previous_scene.type == "game":
+                start = self.font.render("CONTIUNE", True, (255, 255, 255))
+        except AttributeError:
+            pass
         start_rect = start.get_rect(center=(1280 / 2, 500))
         exit = self.font.render("EXIT", True, (255, 255, 255))
         exit_rect = start.get_rect(center=(1280 / 2 + 48/2+3, 500 + 8 + 64))
@@ -770,6 +789,59 @@ class Menu(ezpygame.Scene):
         pass
 
 
+class HandlingScripting:
+    def __init__(self, file):
+        self.pos = 0
+        # self.max = 0
+        self.file = collections.deque()
+        self.current_scene = None
+        self.load_script(file)
+        self.paused = True
+
+    def try_next(self):
+        self.paused = False
+        self.process_line()
+
+    def process_line(self):
+        if not (self.paused):
+            try:
+                line = self.file.popleft().split(" ")
+            except IndexError:
+                return False
+            if line[0][0] == "#":
+                self.pos += 1
+                return "#comment"
+            if line[0] == "game":
+                print("Transisting to game")
+                self.paused = True
+                self.pos += 1
+                self.current_scene = Game(self)
+            if line[0] == "dialogue":
+                print("Transisting to dialogue")
+                print("\t%s, %s" % (line[1], line[2]))
+                self.paused = True
+                self.pos += 1
+                self.current_scene = dialogue.DialogueScene(line[1], line[2], self)
+            if line[0] == "jump":
+                rel_pos = int(line[1]) - self.pos
+                self.pos = int(line[1])
+                for i in range(rel_pos):
+                    try:
+                        self.file.popleft()
+                    except IndexError:
+                        print("%s\tYou deserve it." % i)
+                        os._exit(-9)
+            if line[0] == "open":
+                self.load_script(line[1])
+
+    def load_script(self, file):
+        with open("data/script/game/%s" % file, "r") as f:
+            self.pos = 0
+            self.file = collections.deque(f.readlines())
+            # self.max = len(self.file)
+
+
+Script = HandlingScripting("0_MAIN.gms")
 
 app = ezpygame.Application(
     title="Daoimen",
@@ -777,4 +849,4 @@ app = ezpygame.Application(
     update_rate=60
 )
 
-app.run(Menu())
+app.run(Menu(Script))

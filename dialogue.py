@@ -48,9 +48,9 @@ class Speaker:
         if n == "name":
             self.name = m
         if n == "side":
-            print(n, m)
+            # print(n, m)
             self.side = m.lower()
-            print(self.side)
+            #print(self.side)
         if n == "visibility":
             bl = {"false": False, "true": True}
             self.visibility = bool(bl[m.lower()])
@@ -149,13 +149,14 @@ while 1:
 class Dialogue:
     def __init__(self, filename, bg):
         pygame.font.init()
+        self.type = "dialogue"
         self.font = pygame.font.Font("data/foo.ttf", 32)
         self.scripting = Scripting()
         self.dialogue = collections.deque()
         with open("data/script/dialogue/%s" % filename) as f:
             self.dialogue = collections.deque(f.readlines())
         self.script_line = self.dialogue.popleft()
-        self.test_bg = bg.convert_alpha()
+        self.test_bg = load_png(bg[:-1])[0].convert_alpha()
 
     def darken(self, surf):
         surface = pygame.Surface((surf.get_width(), surf.get_height()), pygame.SRCALPHA)
@@ -213,22 +214,25 @@ class Dialogue:
 
 
 class DialogueScene(ezpygame.Scene):
-    def __init__(self, a, b):
+    def __init__(self, script, background, game_script):
         super().__init__()
-        self.dialogue = Dialogue("001_RinaConsta_TEST.dia", load_png("data/menu_bg02.png")[0])
+        self.game_scripting = game_script
+        self.dialogue = Dialogue(script, background)
 
     def draw(self, screen):
         screen.fill((0, 0, 0))
         screen.blit(self.dialogue.draw(screen), (0, 0))
 
     def update(self, dt):
+        self.game_scripting.process_line()
         self.dialogue.update(dt)
 
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 if not (self.dialogue.next()):
-                    print("Finished")
+                    self.game_scripting.try_next()
+                    self.application.change_scene(self.game_scripting.current_scene)
 
 
 """
@@ -238,5 +242,5 @@ app = ezpygame.Application(
     update_rate=60
 )
 
-app.run(DialogueScene("001_RinaConsta_TEST.dia", load_png("data/menu_bg02.png")[0]))
+app.run(DialogueScene("001_RinaConsta_TEST.dia", "data/menu_bg02.png"))
 """
